@@ -10,7 +10,7 @@ app.use(express.json());
 
 //MongoDB
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.i5oucvb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -29,12 +29,64 @@ async function run() {
 
     //DataBase Declaration: 
     const servicesCollection = client.db("CarDoctor").collection("services");
+    const bookingCollection = client.db("CarDoctor").collection("bookings");
 
 
     //Mongo CRUD operations
-    app.get("/services", async(req, res) => {
+    app.get("/services", async (req, res) => {
       const cursor = servicesCollection.find();
       const result = await cursor.toArray();
+      res.send(result);
+    })
+
+
+    app.get('/services/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const options = {
+        // Include only the `title` and `imdb` fields in each returned document
+        projection: { title: 1, price: 1, service_id: 1, img: 1, price: 1 },
+      };
+      const result = await servicesCollection.findOne(query, options);
+      res.send(result);
+    })
+
+    //Booking CRUD
+    app.post('/bookings', async (req, res) => {
+      const booking = req.body;
+      // console.log(booking)
+      const result = await bookingCollection.insertOne(booking);
+      res.send(result);
+    })
+
+    app.get("/bookings", async (req, res) => {
+      console.log(req.query.email);
+      let query = {};
+      if (req.query?.email) {
+        query = { email: req.query.email }
+      }
+      const result = await bookingCollection.find(query).toArray();
+      res.send(result)
+    })
+
+    app.patch('/bookings/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateBooking = req.body;
+      const updatedDoc = {
+        $set: {
+          status: updateBooking.status,
+        }
+      }
+      // console.log(updateBooking)
+      const result = await bookingCollection.updateOne(filter, updatedDoc);
+      res.send(result)
+    })
+
+    app.delete('/bookings/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookingCollection.deleteOne(query);
       res.send(result);
     })
 
@@ -51,9 +103,9 @@ run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-    res.send("doctor is running")
+  res.send("doctor is running")
 })
 
 app.listen(port, () => {
-    console.log(`Car doctor server is ruuning on port ${port}`)
+  console.log(`Car doctor server is ruuning on port ${port}`)
 })
